@@ -1,0 +1,433 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Provider {
+  SLACK
+  MICROSOFT
+  ATLASSIAN
+}
+
+enum ConnectionStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+}
+
+enum ActivitySource {
+  SLACK
+  OUTLOOK_EMAIL
+  OUTLOOK_CALENDAR
+  JIRA
+  MANUAL
+}
+
+enum BoardColumn {
+  NOW
+  NEXT
+  WAITING
+  DONE
+}
+
+enum DraftTone {
+  INFORMATIVE
+  EXCITED
+  EXECUTIVE_SUMMARY
+  CASUAL
+}
+
+enum DraftStatus {
+  DRAFT
+  SCHEDULED
+  SENT
+  NEEDS_APPROVAL
+}
+
+enum ApprovalDecision {
+  APPROVE
+  REJECT
+}
+
+enum EventType {
+  TASKS_GENERATED
+  TIME_SAVED
+  POST_SCHEDULED
+}
+
+enum CoachingSessionStatus {
+  PLANNED
+  COMPLETED
+  RESCHEDULED
+  CANCELED
+}
+
+enum CoachingCadence {
+  WEEKLY
+  BIWEEKLY
+}
+
+model User {
+  id                    String                 @id @default(cuid())
+  email                 String                 @unique
+  name                  String
+  roleTitle             String                 @default("AI Enablement and Automation Lead")
+  timezone              String                 @default("America/Los_Angeles")
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  settings              UserSettings?
+  integrations          IntegrationConnection[]
+  activities            ActivityFeed[]
+  boards                TaskBoard[]
+  tasks                 TaskCard[]
+  demoTopics            DemoTopic[]
+  keywordRules          ConfluenceKeywordRule[]
+  confluenceResults     ConfluenceResult[]
+  slackDrafts           SlackDraft[]
+  jiraRequests          JiraRequest[]
+  approvalActions       ApprovalAction[]
+  analytics             AnalyticsEvent[]
+  auditLogs             AuditLog[]
+  setupWizardCompleted  Boolean                @default(false)
+  strategicEnablers     StrategicEnabler[]
+  proficiencyAssessments ProficiencyAssessment[]
+  coachingPlans         CoachingPlan[]
+  coachingSessions      CoachingSession[]
+  coachingSettings      CoachingSettings?
+}
+
+model IntegrationConnection {
+  id                     String            @id @default(cuid())
+  userId                 String
+  provider               Provider
+  status                 ConnectionStatus  @default(DISCONNECTED)
+  accountId              String?
+  accountName            String?
+  scopes                 String[]
+  encryptedAccessToken   String?
+  encryptedRefreshToken  String?
+  tokenExpiresAt         DateTime?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  user                   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+}
+
+model UserSettings {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  keyChannels        String[]
+  keyPeople          String[]
+  execSenders        String[]
+  keywords           String[]
+  workingHourStart   Int      @default(9)
+  workingHourEnd     Int      @default(18)
+  taskMin            Int      @default(8)
+  taskMax            Int      @default(20)
+  slackWeight        Float    @default(0.4)
+  emailWeight        Float    @default(0.35)
+  calendarWeight     Float    @default(0.25)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ActivityFeed {
+  id             String         @id @default(cuid())
+  userId         String
+  source         ActivitySource
+  sourceId       String
+  title          String
+  body           String?
+  url            String?
+  author         String?
+  channel        String?
+  priorityHint   Float?
+  dueAt          DateTime?
+  eventAt        DateTime
+  metadata       Json?
+  isUnread       Boolean        @default(false)
+  isFlagged      Boolean        @default(false)
+  isMention      Boolean        @default(false)
+  isDm           Boolean        @default(false)
+  isStarred      Boolean        @default(false)
+  createdAt      DateTime       @default(now())
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, source, sourceId])
+  @@index([userId, eventAt])
+  @@index([userId, source])
+}
+
+model TaskBoard {
+  id             String      @id @default(cuid())
+  userId         String
+  generatedAt    DateTime    @default(now())
+  windowStart    DateTime
+  windowEnd      DateTime
+  totalTasks     Int         @default(0)
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks          TaskCard[]
+
+  @@index([userId, generatedAt])
+}
+
+model TaskCard {
+  id             String       @id @default(cuid())
+  userId         String
+  boardId        String
+  title          String
+  source         ActivitySource
+  effortMinutes  Int
+  dueAt          DateTime?
+  column         BoardColumn  @default(NEXT)
+  link           String?
+  confidence     Float
+  why            String
+  status         String       @default("open")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  board          TaskBoard    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([boardId, column])
+}
+
+model DemoTopic {
+  id             String   @id @default(cuid())
+  userId         String
+  title          String
+  outline        String[]
+  targetAudience String
+  prepMinutes    Int
+  tags           String[]
+  rank           Int
+  generatedAt    DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, generatedAt])
+}
+
+model ConfluenceKeywordRule {
+  id             String   @id @default(cuid())
+  userId         String
+  keyword        String
+  pageUrl        String
+  title          String
+  description    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, keyword])
+}
+
+model ConfluenceResult {
+  id             String   @id @default(cuid())
+  userId         String
+  keyword        String
+  title          String
+  snippet        String
+  pageUrl        String
+  pageId         String
+  lastUpdatedAt  DateTime
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, keyword, pageId])
+  @@index([userId, keyword])
+}
+
+model SlackDraft {
+  id               String      @id @default(cuid())
+  userId           String
+  topic            String
+  tone             DraftTone
+  content          String
+  ctaSuggestions   String[]
+  approvalRequired Boolean     @default(true)
+  channels         String[]
+  scheduledFor     DateTime?
+  recurrence       String?
+  status           DraftStatus @default(DRAFT)
+  queueJobId       String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+}
+
+model JiraRequest {
+  id             String   @id @default(cuid())
+  userId         String
+  issueKey       String
+  issueUrl       String
+  summary        String
+  requester      String
+  priority       String
+  status         String
+  createdDate    DateTime
+  pendingApproval Boolean @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actions        ApprovalAction[]
+
+  @@unique([userId, issueKey])
+  @@index([userId, pendingApproval])
+}
+
+model ApprovalAction {
+  id              String           @id @default(cuid())
+  userId          String
+  jiraRequestId   String
+  decision        ApprovalDecision
+  comment         String?
+  actedAt         DateTime         @default(now())
+  confluencePage  String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jiraRequest     JiraRequest      @relation(fields: [jiraRequestId], references: [id], onDelete: Cascade)
+
+  @@index([userId, actedAt])
+}
+
+model AnalyticsEvent {
+  id             String    @id @default(cuid())
+  userId         String
+  eventType      EventType
+  numericValue   Float
+  metadata       Json?
+  createdAt      DateTime  @default(now())
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, eventType, createdAt])
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  userId         String
+  action         String
+  entityType     String
+  entityId       String
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model StrategicEnabler {
+  id               String                  @id @default(cuid())
+  userId           String
+  name             String
+  roleTeam         String
+  email            String
+  slackHandle      String
+  manager          String?
+  timezone         String                  @default("America/Los_Angeles")
+  notes            String?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  user             User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assessments      ProficiencyAssessment[]
+  plans            CoachingPlan[]
+  sessions         CoachingSession[]
+
+  @@unique([userId, email])
+  @@index([userId, roleTeam])
+}
+
+model ProficiencyAssessment {
+  id                              String           @id @default(cuid())
+  userId                          String
+  strategicEnablerId              String
+  assessmentDate                  DateTime
+  assessor                        String
+  overallScore                    Int
+  promptingFundamentals           Int
+  workflowAutomation              Int
+  toolSelectionEvaluation         Int
+  dataKnowledgeRetrieval          Int
+  responsibleAiRiskAwareness      Int
+  deliveryImplementation          Int
+  evidenceLinks                   String[]
+  strengths                       String
+  gaps                            String
+  createdAt                       DateTime         @default(now())
+  updatedAt                       DateTime         @updatedAt
+  user                            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  strategicEnabler                StrategicEnabler @relation(fields: [strategicEnablerId], references: [id], onDelete: Cascade)
+
+  @@index([userId, assessmentDate])
+  @@index([strategicEnablerId, assessmentDate])
+}
+
+model CoachingPlan {
+  id                    String           @id @default(cuid())
+  userId                String
+  strategicEnablerId    String
+  createdDate           DateTime         @default(now())
+  targetOverallScore    Int
+  focusDimensions       String[]
+  recommendedPractice   String[]
+  suggestedProjects     String[]
+  successMetrics        String
+  resources             String[]
+  user                  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  strategicEnabler      StrategicEnabler @relation(fields: [strategicEnablerId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdDate])
+  @@index([strategicEnablerId, createdDate])
+}
+
+model CoachingSession {
+  id                    String                @id @default(cuid())
+  userId                String
+  strategicEnablerId    String
+  sessionNumber         Int
+  plannedDateTime       DateTime
+  durationMinutes       Int                   @default(45)
+  agenda                String[]
+  prepChecklist         String[]
+  homeworkAssigned      String
+  outcomeNotes          String?
+  nextSteps             String?
+  status                CoachingSessionStatus @default(PLANNED)
+  calendarEventId       String?
+  meetingLink           String?
+  reminderJobId         String?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  user                  User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  strategicEnabler      StrategicEnabler      @relation(fields: [strategicEnablerId], references: [id], onDelete: Cascade)
+
+  @@unique([strategicEnablerId, sessionNumber])
+  @@index([userId, status, plannedDateTime])
+}
+
+model CoachingSettings {
+  id                              String          @id @default(cuid())
+  userId                          String          @unique
+  rubricJson                      Json
+  promptingFundamentalsWeight     Float           @default(1)
+  workflowAutomationWeight        Float           @default(1)
+  toolSelectionEvaluationWeight   Float           @default(1)
+  dataKnowledgeRetrievalWeight    Float           @default(1)
+  responsibleAiRiskAwarenessWeight Float         @default(1)
+  deliveryImplementationWeight    Float           @default(1)
+  cadenceDefault                  CoachingCadence @default(WEEKLY)
+  sessionDurationDefault          Int             @default(45)
+  reminderHoursBefore             Int             @default(24)
+  defaultAgendaTemplates          String[]
+  autoConfluenceLog               Boolean         @default(true)
+  autoCreateHomeworkJira          Boolean         @default(false)
+  createdAt                       DateTime        @default(now())
+  updatedAt                       DateTime        @updatedAt
+  user                            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
