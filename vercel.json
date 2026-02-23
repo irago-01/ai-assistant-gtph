@@ -1,11 +1,5 @@
 {
   "buildCommand": "prisma generate && prisma migrate deploy && next build",
   "installCommand": "npm install",
-  "framework": "nextjs",
-  "regions": ["iad1"],
-  "env": {
-    "DATABASE_URL": "@database_url",
-    "APP_ENCRYPTION_KEY": "@app_encryption_key",
-    "OPENAI_API_KEY": "@openai_api_key"
-  }
+  "framework": "nextjs"
 }
