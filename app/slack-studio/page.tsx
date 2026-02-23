@@ -2,7 +2,7 @@
 
 import { DraftTone } from "@prisma/client";
 import { CalendarClock, SendHorizontal, Sparkles } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { PageShell } from "@/components/page-shell";
@@ -30,7 +30,7 @@ const DEFAULT_TOPICS = [
   "Internal enablement tip"
 ];
 
-export default function SlackStudioPage() {
+function SlackStudioContent() {
   const params = useSearchParams();
 
   const [topicPreset, setTopicPreset] = useState(DEFAULT_TOPICS[0]);
@@ -356,5 +356,13 @@ export default function SlackStudioPage() {
         </div>
       </section>
     </PageShell>
+  );
+}
+
+export default function SlackStudioPage() {
+  return (
+    <Suspense fallback={<PageShell><p>Loading...</p></PageShell>}>
+      <SlackStudioContent />
+    </Suspense>
   );
 }
