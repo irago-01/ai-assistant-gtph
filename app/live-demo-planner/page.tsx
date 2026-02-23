@@ -76,7 +76,7 @@ export default function LiveDemoPlannerPage() {
       <div className="grid-2">
         <section className="card">
           <h2 className="card-title">Generator Inputs</h2>
-          <p className="card-subtitle">Enter topics or keywords separated by commas (e.g., "AI tools, Rovo, n8n")</p>
+          <p className="card-subtitle">Enter topics or keywords separated by commas (e.g., &quot;AI tools, Rovo, n8n&quot;)</p>
 
           <div className="stack">
             <div>

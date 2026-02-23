@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       topics = await generateDemoTopicsWithAI(recentMessages, keywords);
     } else {
       // Use simple keyword-based generation
-      const themes = keywords.map((keyword) => ({
+      const themes = keywords.map((keyword: string) => ({
         name: keyword,
         audience: "General audience",
         tags: [keyword.toLowerCase()]

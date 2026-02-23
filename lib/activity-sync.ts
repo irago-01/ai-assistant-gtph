@@ -542,7 +542,7 @@ async function buildSlackSignalsFromConnection(
         const aiClassification = await classifyMessageAsTask(text, {
           isMention,
           isDm: isDirectDmToMe,
-          sender: senderName
+          sender: senderName ?? undefined
         });
 
         // Skip if AI determines it's not a task (unless flagged as urgent)
@@ -1021,7 +1021,7 @@ function classifySlackTaskCandidate(
   context: { isMention: boolean; isDm: boolean; isFlagged: boolean }
 ) {
   // Clean text thoroughly - order matters!
-  let cleaned = compactSlackText(text)
+  const cleaned = compactSlackText(text)
     // First remove markdown formatting
     .replace(/\*([^*]+)\*/g, "$1")
     .replace(/_([^_]+)_/g, "$1")

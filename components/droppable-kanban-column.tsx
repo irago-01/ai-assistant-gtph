@@ -1,13 +1,13 @@
 "use client";
 
 import { useDroppable } from '@dnd-kit/core';
-import { BoardColumn } from '@prisma/client';
+import { ActivitySource, BoardColumn } from '@prisma/client';
 import { DraggableTaskCard } from './draggable-task-card';
 
 type Task = {
   id: string;
   title: string;
-  source: any;
+  source: ActivitySource;
   effortMinutes: number;
   dueAt: string | null;
   column: BoardColumn;
